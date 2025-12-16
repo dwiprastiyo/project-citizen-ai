@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>News Credibility Checker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    h2 { margin-top: 0; }
+    select, textarea, button {
+      width: 100%;
+      margin: 8px 0;
+      padding: 10px;
+      font-size: 14px;
+    }
+    textarea {
+      min-height: 100px;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    ul {
+      padding: 0;
+    }
+    li {
+      list-style: none;
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      align-items: center;
+    }
+    img {
+      width: 120px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+    .result {
+      display: none;
+      margin-top: 20px;
+    }
+    .progress {
+      background: #e5e7eb;
+      height: 20px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .progress-bar {
+      height: 100%;
+      line-height: 20px;
+      font-size: 12px;
+      color: white;
+      text-align: center;
+    }
+    .low { background: #16a34a; }
+    .medium { background: #f59e0b; }
+    .high { background: #dc2626; }
+    pre {
+      background: #f9fafb;
+      padding: 12px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>Berita Indonesia Terbaru</h2>
+
+  <!-- KATEGORI -->
+  <select id="category">
+    <option value="nasional">Nasional</option>
+    <option value="politik">Politik</option>
+    <option value="ekonomi">Ekonomi</option>
+    <option value="teknologi">Teknologi</option>
+    <option value="olahraga">Olahraga</option>
+  </select>
+
+  <!-- LIST BERITA -->
+  <ul id="newsList"></ul>
+
+  <!-- INPUT ANALISIS -->
+  <textarea id="news" placeholder="1 berita (mode tunggal)"></textarea>
+  <textarea id="newsA" placeholder="Berita A (opsional, mode perbandingan)"></textarea>
+  <textarea id="newsB" placeholder="Berita B (opsional, mode perbandingan)"></textarea>
+
+  <button id="analyzeBtn">Analisis</button>
+
+  <!-- HASIL -->
+  <div class="result" id="result">
+    <h3>Hasil Analisis</h3>
+    <div class="progress">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+    <strong id="riskLabel"></strong>
+    <pre id="analysisText"></pre>
+    <small id="disclaimer"></small>
+  </div>
+</div>
+
+<script>
+/* =========================
+   LOAD BERITA (STABIL PER SESI)
+   ========================= */
+async function loadNews() {
+  const categorySelect = document.getElementById("category");
+  const list = document.getElementById("newsList");
+
+  if (!categorySelect || !list) return;
+
+  const category = categorySelect.value;
+  const cacheKey = `news_cache_${category}`;
+
+  // 🔒 CEK CACHE (PER SESI)
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) {
+    renderNews(JSON.parse(cached));
+    return;
+  }
+
+  // 🌐 FETCH BARU JIKA BELUM ADA CACHE
+  list.innerHTML = "<li>Memuat berita...</li>";
+
+  try {
+    const res = await fetch(
+      `http://localhost:3000/api/news?category=${category}`
+    );
+    const data = await res.json();
+
+    // 💾 SIMPAN KE SESSION STORAGE
+    sessionStorage.setItem(cacheKey, JSON.stringify(data));
+
+    renderNews(data);
+  } catch (err) {
+    console.error(err);
+    list.innerHTML = "<li>Gagal memuat berita</li>";
+  }
+}
+
+/* =========================
+   RENDER BERITA
+   ========================= */
+function renderNews(data) {
+  const list = document.getElementById("newsList");
+  list.innerHTML = "";
+
+  data.forEach(item => {
+    const li = document.createElement("li");
+    li.style.listStyle = "none";
+    li.style.display = "flex";
+    li.style.gap = "10px";
+    li.style.marginBottom = "12px";
+    li.style.cursor = "pointer";
+
+    const img = document.createElement("img");
+    img.src = item.image;
+    img.width = 120;
+    img.height = 80;
+    img.style.objectFit = "cover";
+    img.style.borderRadius = "6px";
+
+    const text = document.createElement("div");
+    text.innerHTML = `<strong>[${item.source}]</strong><br>${item.title}`;
+
+    li.onclick = () => {
+      document.getElementById("news").value =
+        item.title + "\n\n" + item.description;
+    };
+
+    li.appendChild(img);
+    li.appendChild(text);
+    list.appendChild(li);
+  });
+}
+
+/* =========================
+   ANALISIS BERITA (TIDAK DIUBAH)
+   ========================= */
+async function analyze() {
+  const body = {};
+  const news = document.getElementById("news").value;
+  const newsA = document.getElementById("newsA").value;
+  const newsB = document.getElementById("newsB").value;
+
+  if (news.trim()) body.news = news;
+  if (newsA.trim()) body.newsA = newsA;
+  if (newsB.trim()) body.newsB = newsB;
+
+  if (Object.keys(body).length === 0) {
+    alert("Masukkan minimal satu berita");
+    return;
+  }
+
+  const res = await fetch("http://localhost:3000/api/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  if (data.error) {
+    alert(data.error);
+    return;
+  }
+
+  const percent = data.risk_percentage || 0;
+  const bar = document.getElementById("progressBar");
+  const label = document.getElementById("riskLabel");
+
+  bar.style.width = percent + "%";
+  bar.textContent = percent + "%";
+  bar.className =
+    "progress-bar " +
+    (percent < 40 ? "low" : percent < 70 ? "medium" : "high");
+
+  label.textContent =
+    percent < 40 ? "Risiko Rendah" :
+    percent < 70 ? "Risiko Sedang" :
+    "Risiko Tinggi";
+
+  document.getElementById("analysisText").textContent =
+    data.summary || data.analysis;
+  document.getElementById("disclaimer").textContent = data.disclaimer;
+  document.getElementById("result").style.display = "block";
+}
+
+/* =========================
+   EVENT BINDING
+   ========================= */
+document.addEventListener("DOMContentLoaded", () => {
+  document
+    .getElementById("category")
+    .addEventListener("change", loadNews);
+
+  document
+    .getElementById("analyzeBtn")
+    .addEventListener("click", analyze);
+
+  loadNews(); // load pertama
+});
+</script>
+</body>
+</html>
