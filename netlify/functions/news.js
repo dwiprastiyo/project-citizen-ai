@@ -8,35 +8,58 @@ const SOURCES = [
 ];
 
 export const handler = async () => {
-  try {
-    const parser = new XMLParser();
-    let allNews = [];
+  const parser = new XMLParser();
+  let allNews = [];
 
-    for (const source of SOURCES) {
-      const res = await fetch(source.url);
+  for (const source of SOURCES) {
+    try {
+      const res = await fetch(source.url, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
+        }
+      });
+
+      if (!res.ok) continue;
+
       const xml = await res.text();
       const json = parser.parse(xml);
 
-      const items = json.rss.channel.item.slice(0, 5).map(item => ({
-        title: item.title,
-        link: item.link,
-        source: source.name,
-        published: item.pubDate || "-"
-      }));
+      const items = json?.rss?.channel?.item || [];
 
-      allNews = allNews.concat(items);
+      items.slice(0, 5).forEach(item => {
+        allNews.push({
+          title: item.title,
+          link: item.link,
+          source: source.name,
+          published: item.pubDate || "-"
+        });
+      });
+
+    } catch (err) {
+      // kalau satu media gagal, JANGAN hentikan semuanya
+      console.error(`Gagal fetch dari ${source.name}`);
     }
+  }
 
+  // fallback jika SEMUA media gagal
+  if (allNews.length === 0) {
     return {
       statusCode: 200,
-      body: JSON.stringify(allNews)
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: "Gagal mengambil berita Indonesia"
-      })
+      body: JSON.stringify([
+        {
+          title:
+            "Berita nasional tidak dapat dimuat sementara. Silakan coba lagi.",
+          link: "#",
+          source: "Sistem",
+          published: "-"
+        }
+      ])
     };
   }
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify(allNews)
+  };
 };
