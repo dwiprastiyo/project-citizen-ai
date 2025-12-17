@@ -1,23 +1,10 @@
-import fetch from "node-fetch";
 import { XMLParser } from "fast-xml-parser";
 
 const SOURCES = [
-  {
-    name: "Kompas",
-    url: "https://rss.kompas.com/rss/nasional"
-  },
-  {
-    name: "Detik",
-    url: "https://rss.detik.com/index.php/nasional"
-  },
-  {
-    name: "CNN Indonesia",
-    url: "https://www.cnnindonesia.com/nasional/rss"
-  },
-  {
-    name: "Tempo",
-    url: "https://rss.tempo.co/nasional"
-  }
+  { name: "Kompas", url: "https://rss.kompas.com/rss/nasional" },
+  { name: "Detik", url: "https://rss.detik.com/index.php/nasional" },
+  { name: "CNN Indonesia", url: "https://www.cnnindonesia.com/nasional/rss" },
+  { name: "Tempo", url: "https://rss.tempo.co/nasional" }
 ];
 
 export const handler = async () => {
@@ -26,7 +13,8 @@ export const handler = async () => {
     let allNews = [];
 
     for (const source of SOURCES) {
-      const xml = await (await fetch(source.url)).text();
+      const res = await fetch(source.url);
+      const xml = await res.text();
       const json = parser.parse(xml);
 
       const items = json.rss.channel.item.slice(0, 5).map(item => ({
@@ -43,11 +31,11 @@ export const handler = async () => {
       statusCode: 200,
       body: JSON.stringify(allNews)
     };
-  } catch (error) {
+  } catch (err) {
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: "Gagal mengambil berita dari media Indonesia"
+        error: "Gagal mengambil berita Indonesia"
       })
     };
   }

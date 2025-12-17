@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 export async function analyzeWithAI(newsA, newsB) {
   const prompt = `
 Anda adalah asisten literasi media.
