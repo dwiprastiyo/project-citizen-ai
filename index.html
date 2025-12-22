@@ -1,160 +1,286 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <title>Project Citizen – Cek Kredibilitas Berita</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <title>Project Citizen – Analisis Kredibilitas Berita</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-      background: #f9f9f9;
-    }
-    h1, h2 {
-      color: #333;
-    }
-    ul {
-      padding-left: 20px;
-    }
-    li {
-      cursor: pointer;
-      margin-bottom: 8px;
-    }
-    textarea {
-      width: 100%;
-      max-width: 900px;
-      padding: 10px;
-      margin-bottom: 10px;
-    }
-    button {
-      padding: 10px 18px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    pre {
-      background: #111;
-      color: #0f0;
-      padding: 15px;
-      white-space: pre-wrap;
-      max-width: 900px;
-      overflow-x: auto;
-    }
-    .news-source {
-      font-size: 12px;
-      color: #666;
-    }
-  </style>
+    <style>
+        body {
+            margin: 0;
+            background: #f5f7fb;
+            font-family: Arial, sans-serif;
+        }
+
+        header {
+            background: #1a73e8;
+            color: white;
+            padding: 22px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        /* NEWS LIST */
+        .news-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .news-card:hover {
+            transform: scale(1.01);
+        }
+
+        .news-image {
+            width: 120px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #ddd;
+        }
+
+        .analysis-box {
+            background: white;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 7px rgba(0,0,0,0.06);
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 16px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            margin-top: 10px;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 3px 7px rgba(0,0,0,0.06);
+        }
+
+        .risk-bar-container {
+            background: #e8e8e8;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .risk-bar {
+            height: 100%;
+            background: #e53935;
+            width: 0%;
+            transition: width 0.8s ease;
+        }
+
+        table.indicator {
+            margin-top: 15px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table.indicator th, table.indicator td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+        table.indicator th {
+            background: #f0f0f0;
+        }
+
+        /* LOADING MASKOT AI */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(3px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            display: none;
+        }
+
+        .mascot {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            animation: spinMascot 1.3s linear infinite;
+        }
+
+        @keyframes spinMascot {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            margin-top: 15px;
+            text-align: center;
+            color: #333;
+            font-weight: bold;
+            animation: blink 1.3s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1 }
+            50% { opacity: 0.4 }
+            100% { opacity: 1 }
+        }
+
+    </style>
 </head>
-
 <body>
 
-<h1>Project Citizen</h1>
-<h2>Analisis Kredibilitas & Perbandingan Berita Indonesia</h2>
+<header>Project Citizen – Analisis Kredibilitas Berita</header>
 
-<hr />
+<!-- MASKOT LOADING -->
+<div id="loading" class="loading-overlay">
+    <div style="text-align:center;">
+        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712103.png"
+             alt="AI Mascot"
+             class="mascot">
+        <div class="loading-text">AI sedang menganalisis...</div>
+    </div>
+</div>
 
-<h2>📰 Daftar Berita Nasional</h2>
-<p>Klik salah satu berita untuk dimasukkan sebagai Berita A.</p>
+<div class="container">
 
-<ul id="newsList">
-  <li>Memuat berita...</li>
-</ul>
+    <h2>Berita Indonesia</h2>
 
-<hr />
+    <select id="category" onchange="loadNews()">
+        <option value="nasional">Nasional</option>
+        <option value="politik">Politik</option>
+        <option value="ekonomi">Ekonomi</option>
+        <option value="teknologi">Teknologi</option>
+    </select>
 
-<h2>📝 Input Berita</h2>
+    <div id="news-list"></div>
 
-<label><strong>Berita A (Utama)</strong></label><br />
-<textarea id="newsA" rows="4" placeholder="Berita utama akan muncul di sini"></textarea>
+    <div class="analysis-box">
+        <h2>Analisis Kredibilitas</h2>
 
-<label><strong>Berita B (Pembanding / Pro–Kontra)</strong></label><br />
-<textarea id="newsB" rows="4" placeholder="Masukkan berita pembanding (opsional)"></textarea>
+        <label>Berita A</label>
+        <textarea id="newsA"></textarea>
 
-<button onclick="analyze()">🔍 Analisis Berita</button>
+        <label>Berita B (opsional)</label>
+        <textarea id="newsB"></textarea>
 
-<hr />
+        <button onclick="analyze()">Analisis Berita</button>
+    </div>
 
-<h2>📊 Hasil Analisis</h2>
-<pre id="result">Belum ada analisis.</pre>
+    <div id="result"></div>
+
+</div>
 
 <script>
-  // =========================
-  // LOAD BERITA DARI NETLIFY
-  // =========================
-  async function loadNews() {
-    try {
-      const res = await fetch("/.netlify/functions/news");
-      const data = await res.json();
+    const API_URL = "https://project-citizen.netlify.app/.netlify/functions";
 
-      const list = document.getElementById("newsList");
-      list.innerHTML = "";
+    async function loadNews() {
+        const category = document.getElementById("category").value;
 
-      data.forEach(item => {
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <strong>${item.title}</strong><br />
-          <span class="news-source">${item.source} | ${item.published}</span>
-        `;
-        li.onclick = () => {
-          document.getElementById("newsA").value = item.title;
-        };
-        list.appendChild(li);
-      });
+        try {
+            const res = await fetch(`${API_URL}/news?category=${category}`);
+            const data = await res.json();
 
-    } catch (err) {
-      document.getElementById("newsList").innerHTML =
-        "<li>Gagal memuat berita.</li>";
-    }
-  }
+            const container = document.getElementById("news-list");
+            container.innerHTML = "";
 
-  // =========================
-  // ANALISIS BERITA (AI)
-  // =========================
-  async function analyze() {
-  const newsA = document.getElementById("newsA").value.trim();
-  const newsB = document.getElementById("newsB").value.trim();
-  const resultBox = document.getElementById("result");
+            data.forEach(n => {
+                container.innerHTML += `
+                    <div class="news-card" onclick="document.getElementById('newsA').value = \`${n.title}: ${n.description}\`">
+                        <img class="news-image" src="${n.image}" onerror="this.src='https://via.placeholder.com/120x80?text=No+Image'"/>
+                        <div>
+                            <div class="news-title">${n.title}</div>
+                            <div class="news-desc">${n.description}</div>
+                        </div>
+                    </div>
+                `;
+            });
 
-  if (!newsA) {
-    resultBox.textContent = "⚠️ Berita A wajib diisi.";
-    return;
-  }
-
-  resultBox.textContent = "⏳ Menganalisis berita...";
-
-  try {
-    const res = await fetch("/.netlify/functions/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      
-      /* ⬇️⬇️ Bagian yang kamu tanyakan — TARUH DI SINI ⬇️⬇️ */
-      body: JSON.stringify({ newsA, newsB })
-      /* ⬆️⬆️ WAJIB ADA DI SINI ⬆️⬆️ */
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      resultBox.textContent = "❌ " + data.error;
-      return;
+        } catch (err) {
+            console.log(err);
+        }
     }
 
-    resultBox.textContent = `
-Ringkasan dan Analisis:
-${data.analysis_text}
+    async function analyze() {
+        const newsA = document.getElementById("newsA").value;
+        const newsB = document.getElementById("newsB").value;
 
--------------------------
-Persentase Risiko: ${data.risk_percentage}%
-Level Risiko: ${data.risk_level}
-`;
-  } catch (err) {
-    resultBox.textContent = "❌ Gagal menghubungi server.";
-  }
-}
+        // SHOW MASKOT
+        document.getElementById("loading").style.display = "flex";
 
-  // load saat halaman dibuka
-  loadNews();
+        try {
+            const res = await fetch(`${API_URL}/analyze`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ newsA, newsB })
+            });
+
+            const result = await res.json();
+            const riskPercent = result.risk_percentage || 0;
+
+            document.getElementById("result").innerHTML = `
+                <div class="result-box">
+                    <h3>Hasil Analisis</h3>
+                    <pre>${result.analysis_text}</pre>
+
+                    <h4>Tingkat Risiko</h4>
+                    <div class="risk-bar-container">
+                        <div class="risk-bar" style="width:${riskPercent}%"></div>
+                    </div>
+                    <p><b>${riskPercent}% – ${result.risk_level}</b></p>
+
+                    <h4>Indikator Risiko</h4>
+                    <table class="indicator">
+                        <tr><th>Indikator</th><th>Nilai</th></tr>
+                        <tr><td>A: Sumber tidak jelas</td><td>${result.indicators.A}</td></tr>
+                        <tr><td>B: Narasumber anonim</td><td>${result.indicators.B}</td></tr>
+                        <tr><td>C: Judul sensasional</td><td>${result.indicators.C}</td></tr>
+                        <tr><td>D: Konteks tidak jelas</td><td>${result.indicators.D}</td></tr>
+                        <tr><td>E: Bahasa emosional</td><td>${result.indicators.E}</td></tr>
+                    </table>
+                </div>
+            `;
+        } catch (err) {
+            alert("Gagal menganalisis berita.");
+        }
+
+        // HIDE LOADING
+        document.getElementById("loading").style.display = "none";
+    }
+
+    loadNews();
 </script>
 
 </body>
