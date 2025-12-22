@@ -112,50 +112,46 @@
   // ANALISIS BERITA (AI)
   // =========================
   async function analyze() {
-    const newsA = document.getElementById("newsA").value.trim();
-    const newsB = document.getElementById("newsB").value.trim();
-    const resultBox = document.getElementById("result");
+  const newsA = document.getElementById("newsA").value.trim();
+  const newsB = document.getElementById("newsB").value.trim();
+  const resultBox = document.getElementById("result");
 
-    if (!newsA) {
-      resultBox.textContent = "⚠️ Berita A wajib diisi.";
+  if (!newsA) {
+    resultBox.textContent = "⚠️ Berita A wajib diisi.";
+    return;
+  }
+
+  resultBox.textContent = "⏳ Menganalisis berita...";
+
+  try {
+    const res = await fetch("/.netlify/functions/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      
+      /* ⬇️⬇️ Bagian yang kamu tanyakan — TARUH DI SINI ⬇️⬇️ */
+      body: JSON.stringify({ newsA, newsB })
+      /* ⬆️⬆️ WAJIB ADA DI SINI ⬆️⬆️ */
+    });
+
+    const data = await res.json();
+
+    if (data.error) {
+      resultBox.textContent = "❌ " + data.error;
       return;
     }
 
-    resultBox.textContent = "⏳ Menganalisis berita...";
-
-    try {
-      const res = await fetch("/.netlify/functions/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newsA, newsB })
-      });
-
-      const data = await res.json();
-
-      if (data.error) {
-        resultBox.textContent = "❌ " + data.error;
-        return;
-      }
-
-      resultBox.textContent =
-`Ringkasan & Analisis:
+    resultBox.textContent = `
+Ringkasan dan Analisis:
 ${data.analysis_text}
-
--------------------------
-Indikator Risiko:
-${JSON.stringify(data.indicators, null, 2)}
 
 -------------------------
 Persentase Risiko: ${data.risk_percentage}%
 Level Risiko: ${data.risk_level}
-
-Catatan:
-${data.disclaimer}`;
-
-    } catch (err) {
-      resultBox.textContent = "❌ Gagal terhubung ke server.";
-    }
+`;
+  } catch (err) {
+    resultBox.textContent = "❌ Gagal menghubungi server.";
   }
+}
 
   // load saat halaman dibuka
   loadNews();
