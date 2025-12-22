@@ -11,47 +11,43 @@ export const handler = async (event) => {
 
   try {
     if (!event.body) {
-      return {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "Request body kosong" })
-      };
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "Request body kosong" }) };
     }
 
     const { newsA, newsB } = JSON.parse(event.body);
 
-    if (!newsA || newsA.trim() === "") {
-      return {
-        statusCode: 400,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "Berita A wajib diisi" })
-      };
+    if (!newsA || !newsA.trim()) {
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: "Berita A wajib diisi" }) };
     }
+
+    const isCompare = newsB && newsB.trim() !== "";
 
     const prompt = `
 Anda adalah analis literasi media.
 
-BATASAN OUTPUT:
-- Ringkasan maksimal 5 kalimat.
-- PRO 3 poin.
-- KONTRA 3 poin.
-- Perbandingan maksimal 5 kalimat.
-- Max 1200 karakter.
+Jika hanya Berita A:
+- Ringkas berita A (maksimal 5 kalimat)
+- Buat PRO (3 poin) dan KONTRA (3 poin)
+- Nilai indikator A–E
 
-TUGAS:
-1. Ringkas Berita A.
-2. Jika ada, bandingkan dengan Berita B.
-3. Jika tidak ada, buat PRO & KONTRA.
-4. Nilai indikator risiko (YA/TIDAK):
+Jika ada Berita B:
+- Ringkas A & B
+- Buat perbandingan sudut pandang
+- PRO & KONTRA lebih ringkas
+- Nilai indikator A–E tetap memakai Berita A
+
+Indikator Risiko:
 A. Sumber tidak jelas
 B. Narasumber anonim
 C. Judul sensasional
 D. Konteks tidak jelas
 E. Bahasa emosional
 
-FORMAT OUTPUT:
+FORMAT WAJIB:
 Ringkasan:
 ...
+
+${isCompare ? "Perbandingan:\n...\n" : ""}
 
 Pro dan Kontra:
 PRO:
@@ -59,49 +55,65 @@ PRO:
 KONTRA:
 - ...
 
-Perbandingan (jika ada):
-...
-
 Indikator Risiko:
 A: YA/TIDAK - ...
 B: YA/TIDAK - ...
 C: YA/TIDAK - ...
 D: YA/TIDAK - ...
 E: YA/TIDAK - ...
+
+Berita A:
+${newsA}
+
+Berita B:
+${newsB || "(Tidak ada)"} 
 `;
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const key = process.env.OPENROUTER_API_KEY;
 
     async function call(model) {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: "user", content: prompt }]
-        })
-      });
+      try {
+        const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: prompt }]
+          })
+        });
 
-      const data = await res.json();
-      return data?.choices?.[0]?.message?.content || null;
+        const d = await r.json();
+        return d?.choices?.[0]?.message?.content || null;
+
+      } catch {
+        return null;
+      }
     }
 
-    const models = [
+    const MODELS = [
       "google/gemma-3n-e2b-it:free",
       "google/gemma-2-27b-it:free",
       "meta-llama/llama-3.1-8b-instruct:free"
     ];
 
     let output = null;
-    for (let m of models) {
+    for (let m of MODELS) {
       output = await call(m);
       if (output) break;
     }
 
+    if (!output) {
+      return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ error: "AI tidak merespons" }) };
+    }
+
+    // =============================
+    // hitung indikator
+    // =============================
     const ind = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+
     if (output.includes("A: YA")) ind.A = 20;
     if (output.includes("B: YA")) ind.B = 20;
     if (output.includes("C: YA")) ind.C = 20;
@@ -122,7 +134,7 @@ E: YA/TIDAK - ...
         indicators: ind,
         risk_percentage: total,
         risk_level: level,
-        disclaimer: "Persentase menunjukkan risiko misinformasi, bukan kebenaran berita."
+        is_compare: isCompare
       })
     };
 

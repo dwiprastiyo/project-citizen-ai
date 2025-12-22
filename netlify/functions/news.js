@@ -13,7 +13,7 @@ export const handler = async (event) => {
     const category = event.queryStringParameters.category || "nasional";
 
     // ================================
-    // 1. SOURCES MULTI PORTAL
+    // 1. MULTI RSS PORTAL INDONESIA
     // ================================
     const SOURCES = {
       nasional: [
@@ -48,7 +48,7 @@ export const handler = async (event) => {
     const selectedSources = SOURCES[category] || SOURCES["nasional"];
 
     // ================================
-    // 2. PARSER TANPA DEPENDENCY
+    // PARSER TANPA DEPENDENCY
     // ================================
     function getBetween(text, start, end) {
       const s = text.indexOf(start);
@@ -61,9 +61,7 @@ export const handler = async (event) => {
     async function fetchRSS(url) {
       try {
         const xml = await fetch(url).then(r => r.text());
-
-        // Detik sometimes returns HTML — detect & ignore
-        if (xml.startsWith("<!DOCTYPE html>") || xml.startsWith("<html")) return [];
+        if (xml.startsWith("<!DOCTYPE html>")) return [];
 
         const items = xml.split("<item>").slice(1, 6);
 
@@ -71,13 +69,10 @@ export const handler = async (event) => {
           title: getBetween(item, "<title>", "</title>") || "",
           description: getBetween(item, "<description>", "</description>") || "",
           link: getBetween(item, "<link>", "</link>") || "",
-          pubDate: getBetween(item, "<pubDate>", "</pubDate>") || "",
-
           image:
-            getBetween(item, 'url="', '"') ||                        // Tempo / Kompas / Antara
-            getBetween(item, "<img>", "</img>") ||                  // beberapa portal custom
+            getBetween(item, 'url="', '"') ||
+            getBetween(item, "<img>", "</img>") ||
             "https://placehold.co/120x80",
-
           source:
             url.includes("cnn") ? "CNN Indonesia" :
             url.includes("tempo") ? "Tempo" :
@@ -87,37 +82,32 @@ export const handler = async (event) => {
             url.includes("kumparan") ? "Kumparan" :
             "Portal Indonesia"
         }));
-
       } catch {
         return [];
       }
     }
 
     // ================================
-    // 3. AMBIL SEMUA RSS
+    // AMBIL SEMUA RSS
     // ================================
-    let aggregated = [];
+    let list = [];
 
     for (const url of selectedSources) {
       const items = await fetchRSS(url);
-      aggregated.push(...items);
+      list.push(...items);
     }
 
-    // FILTER KOSONG
-    aggregated = aggregated.filter(n => n.title && n.description);
+    // filter invalid
+    list = list.filter(n => n.title && n.description);
 
-    // ================================
-    // 4. SHUFFLE (AUTO RANDOM)
-    // ================================
-    const shuffled = aggregated
+    // randomizer
+    list = list
       .map(v => ({ sort: Math.random(), value: v }))
       .sort((a, b) => a.sort - b.sort)
       .map(v => v.value);
 
-    // ================================
-    // 5. AMBIL 10 BERITA FINAL
-    // ================================
-    const finalNews = shuffled.slice(0, 12);
+    // ambil 12 berita
+    const finalNews = list.slice(0, 12);
 
     return {
       statusCode: 200,
