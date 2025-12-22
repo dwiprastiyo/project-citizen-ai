@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 export const handler = async (event) => {
   try {
     if (!event.body) {
@@ -59,121 +57,107 @@ Berita B:
 ${newsB || "(Tidak ada)"} 
 `;
 
-    const openrouterKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.OPENROUTER_API_KEY;
 
-    if (!openrouterKey) {
+    if (!apiKey) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "API KEY tidak terbaca di Netlify" }),
+        body: JSON.stringify({ error: "API key tidak terbaca di Netlify" }),
       };
     }
 
     // ==========================
-    // FUNGSI REQUEST DENGAN RETRY
+    // Fungsi request AI dgn retry
     // ==========================
     async function callAI(modelName) {
       let attempts = 0;
 
       while (attempts < 3) {
         try {
-          const aiResponse = await fetch(
-            "https://openrouter.ai/api/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${openrouterKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model: modelName,
-                messages: [{ role: "user", content: prompt }],
-              }),
-            }
-          );
+          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              model: modelName,
+              messages: [{ role: "user", content: prompt }]
+            })
+          });
 
-          const data = await aiResponse.json();
+          const data = await res.json();
 
-          // Cek jika sukses
-          if (data.choices && data.choices[0]) {
+          if (data?.choices?.[0]?.message?.content) {
             return data.choices[0].message.content;
           }
 
-          // Jika ada error dari server
           attempts++;
-          await new Promise((res) => setTimeout(res, 700));
-
-        } catch (err) {
+          await new Promise(r => setTimeout(r, 800));
+        } catch {
           attempts++;
-          await new Promise((res) => setTimeout(res, 700));
+          await new Promise(r => setTimeout(r, 800));
         }
       }
 
       return null;
     }
 
-    // ==========================
-    // MODEL UTAMA + MODEL CADANGAN
-    // ==========================
+    // Model utama + fallback
     const MODELS = [
-      "google/gemma-3n-e2b-it:free",        // model pilihan kamu
-      "google/gemma-2-27b-it:free",         // fallback 1 (stabil)
-      "meta-llama/llama-3.1-8b-instruct:free" // fallback 2 (paling aman)
+      "google/gemma-3n-e2b-it:free",
+      "google/gemma-2-27b-it:free",
+      "meta-llama/llama-3.1-8b-instruct:free"
     ];
 
-    let aiText = null;
+    let output = null;
 
-    for (let model of MODELS) {
-      aiText = await callAI(model);
-      if (aiText) break;
+    for (const model of MODELS) {
+      output = await callAI(model);
+      if (output) break;
     }
 
-    if (!aiText) {
+    if (!output) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "AI gagal merespon setelah 3 percobaan." }),
+        body: JSON.stringify({ error: "AI gagal merespon setelah 3 percobaan" }),
       };
     }
 
     // =============================
-    // HITUNG INDIKATOR & PERSENTASE
+    // Hitung indikator risiko
     // =============================
     const indicators = { A: 0, B: 0, C: 0, D: 0, E: 0 };
 
-    if (aiText.includes("A: YA")) indicators.A = 20;
-    if (aiText.includes("B: YA")) indicators.B = 20;
-    if (aiText.includes("C: YA")) indicators.C = 20;
-    if (aiText.includes("D: YA")) indicators.D = 20;
-    if (aiText.includes("E: YA")) indicators.E = 20;
+    if (output.includes("A: YA")) indicators.A = 20;
+    if (output.includes("B: YA")) indicators.B = 20;
+    if (output.includes("C: YA")) indicators.C = 20;
+    if (output.includes("D: YA")) indicators.D = 20;
+    if (output.includes("E: YA")) indicators.E = 20;
 
-    const riskPercentage =
-      indicators.A +
-      indicators.B +
-      indicators.C +
-      indicators.D +
-      indicators.E;
+    const risk_percentage =
+      indicators.A + indicators.B + indicators.C + indicators.D + indicators.E;
 
-    let level = "Rendah";
-    if (riskPercentage >= 40) level = "Sedang";
-    if (riskPercentage >= 70) level = "Tinggi";
+    let risk_level = "Rendah";
+    if (risk_percentage >= 40) risk_level = "Sedang";
+    if (risk_percentage >= 70) risk_level = "Tinggi";
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        analysis_text: aiText,
+        analysis_text: output,
         indicators,
-        risk_percentage: riskPercentage,
-        risk_level: level,
+        risk_percentage,
+        risk_level,
         disclaimer:
-          "Persentase ini menunjukkan potensi risiko misinformasi berdasarkan indikator literasi media, bukan penentu benar/salahnya berita."
+          "Persentase menunjukkan potensi risiko misinformasi berdasarkan indikator literasi media, bukan penentu kebenaran."
       }),
     };
+
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: "Terjadi kesalahan internal server",
-        detail: err.message,
-      }),
+      body: JSON.stringify({ error: "Kesalahan server", detail: err.message }),
     };
   }
 };
