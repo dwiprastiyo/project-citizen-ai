@@ -1,65 +1,55 @@
-import { XMLParser } from "fast-xml-parser";
+export const handler = async (event) => {
+  try {
+    const allowedCategories = {
+      nasional: "https://rss.tempo.co/nasional",
+      politik: "https://rss.tempo.co/politik",
+      ekonomi: "https://rss.tempo.co/ekonomi",
+      teknologi: "https://rss.tempo.co/tekno"
+    };
 
-const SOURCES = [
-  { name: "Kompas", url: "https://rss.kompas.com/rss/nasional" },
-  { name: "Detik", url: "https://rss.detik.com/index.php/nasional" },
-  { name: "CNN Indonesia", url: "https://www.cnnindonesia.com/nasional/rss" },
-  { name: "Tempo", url: "https://rss.tempo.co/nasional" }
-];
+    const category = event.queryStringParameters.category || "nasional";
 
-export const handler = async () => {
-  const parser = new XMLParser();
-  let allNews = [];
-
-  for (const source of SOURCES) {
-    try {
-      const res = await fetch(source.url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
-        }
-      });
-
-      if (!res.ok) continue;
-
-      const xml = await res.text();
-      const json = parser.parse(xml);
-
-      const items = json?.rss?.channel?.item || [];
-
-      items.slice(0, 5).forEach(item => {
-        allNews.push({
-          title: item.title,
-          link: item.link,
-          source: source.name,
-          published: item.pubDate || "-"
-        });
-      });
-
-    } catch (err) {
-      // kalau satu media gagal, JANGAN hentikan semuanya
-      console.error(`Gagal fetch dari ${source.name}`);
+    if (!allowedCategories[category]) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Kategori tidak valid" }),
+      };
     }
-  }
 
-  // fallback jika SEMUA media gagal
-  if (allNews.length === 0) {
+    const rssURL = allowedCategories[category];
+
+    const xmlText = await fetch(rssURL).then(r => r.text());
+
+    function getBetween(text, start, end) {
+      const s = text.indexOf(start);
+      if (s === -1) return null;
+      const e = text.indexOf(end, s + start.length);
+      if (e === -1) return null;
+      return text.substring(s + start.length, e).trim();
+    }
+
+    const items = xmlText.split("<item>").slice(1, 11);
+
+    const results = items.map(itemXML => ({
+      title: getBetween(itemXML, "<title>", "</title>") || "",
+      description: getBetween(itemXML, "<description>", "</description>") || "",
+      image:
+        getBetween(itemXML, 'url="', '"') ||
+        "https://via.placeholder.com/120x80?text=News"
+    }));
+
     return {
       statusCode: 200,
-      body: JSON.stringify([
-        {
-          title:
-            "Berita nasional tidak dapat dimuat sementara. Silakan coba lagi.",
-          link: "#",
-          source: "Sistem",
-          published: "-"
-        }
-      ])
+      body: JSON.stringify(results)
+    };
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Gagal mengambil berita",
+        detail: error.message
+      })
     };
   }
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify(allNews)
-  };
 };

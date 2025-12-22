@@ -1,286 +1,279 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <title>Project Citizen – Analisis Kredibilitas Berita</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<title>Project Citizen – Cek Kredibilitas Berita</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body {
-            margin: 0;
-            background: #f5f7fb;
-            font-family: Arial, sans-serif;
-        }
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    padding: 0;
+}
 
-        header {
-            background: #1a73e8;
-            color: white;
-            padding: 22px;
-            text-align: center;
-            font-size: 22px;
-            font-weight: bold;
-        }
+header {
+    background: #1a73e8;
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-size: 20px;
+}
 
-        .container {
-            max-width: 900px;
-            margin: auto;
-            padding: 20px;
-        }
+.container {
+    padding: 20px;
+    max-width: 900px;
+    margin: auto;
+}
 
-        /* NEWS LIST */
-        .news-card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .news-card:hover {
-            transform: scale(1.01);
-        }
+/* BERITA LIST */
+.news-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
+}
 
-        .news-image {
-            width: 120px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 6px;
-            background: #ddd;
-        }
+.news-item {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    gap: 15px;
+    box-shadow: 0 3px 7px rgba(0,0,0,0.1);
+}
 
-        .analysis-box {
-            background: white;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 10px;
-            box-shadow: 0 3px 7px rgba(0,0,0,0.06);
-        }
+.news-item img {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+}
 
-        textarea {
-            width: 100%;
-            height: 120px;
-            margin-top: 10px;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-        }
+/* TEXT AREA */
+textarea {
+    width: 100%;
+    height: 120px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    resize: vertical;
+}
 
-        button {
-            padding: 10px 16px;
-            background: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 15px;
-            margin-top: 10px;
-        }
+/* BUTTON */
+button {
+    margin-top: 15px;
+    padding: 12px 20px;
+    background: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 100%;
+    cursor: pointer;
+    font-size: 16px;
+}
+button:hover {
+    background: #155fcc;
+}
 
-        .result-box {
-            margin-top: 20px;
-            padding: 20px;
-            background: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 3px 7px rgba(0,0,0,0.06);
-        }
+/* RESULT BOX */
+.result-box {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 25px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
 
-        .risk-bar-container {
-            background: #e8e8e8;
-            height: 20px;
-            border-radius: 10px;
-            overflow: hidden;
-        }
+/* ANALYSIS TEXT AUTO-FIT */
+.result-box pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-height: 350px;
+    overflow-y: auto;
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+}
 
-        .risk-bar {
-            height: 100%;
-            background: #e53935;
-            width: 0%;
-            transition: width 0.8s ease;
-        }
+/* SCROLLBAR */
+.result-box pre::-webkit-scrollbar {
+    width: 8px;
+}
+.result-box pre::-webkit-scrollbar-thumb {
+    background: #1a73e8;
+    border-radius: 4px;
+}
+.result-box pre::-webkit-scrollbar-track {
+    background: #e0e0e0;
+}
 
-        table.indicator {
-            margin-top: 15px;
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table.indicator th, table.indicator td {
-            border: 1px solid #ccc;
-            padding: 8px;
-        }
-        table.indicator th {
-            background: #f0f0f0;
-        }
+/* RISK BAR */
+.risk-bar-container {
+    width: 100%;
+    background: #ddd;
+    height: 12px;
+    border-radius: 10px;
+}
+.risk-bar {
+    height: 100%;
+    background: #e53935;
+    border-radius: 10px;
+}
 
-        /* LOADING MASKOT AI */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(3px);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 999;
-            display: none;
-        }
+/* LOADING OVERLAY */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(3px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
 
-        .mascot {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            animation: spinMascot 1.3s linear infinite;
-        }
+/* MASKOT AI */
+.mascot {
+    width: 90px;
+    animation: spin 1.2s linear infinite;
+}
 
-        @keyframes spinMascot {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            font-size: 18px;
-            margin-top: 15px;
-            text-align: center;
-            color: #333;
-            font-weight: bold;
-            animation: blink 1.3s infinite;
-        }
-
-        @keyframes blink {
-            0% { opacity: 1 }
-            50% { opacity: 0.4 }
-            100% { opacity: 1 }
-        }
-
-    </style>
+@keyframes spin {
+    0% { transform: rotate(0); }
+    100% { transform: rotate(360deg); }
+}
+</style>
 </head>
+
 <body>
 
-<header>Project Citizen – Analisis Kredibilitas Berita</header>
+<header><b>PROJECT CITIZEN – CEK KREDIBILITAS BERITA</b></header>
 
-<!-- MASKOT LOADING -->
-<div id="loading" class="loading-overlay">
-    <div style="text-align:center;">
-        <img src="https://cdn-icons-png.flaticon.com/512/4712/4712103.png"
-             alt="AI Mascot"
-             class="mascot">
-        <div class="loading-text">AI sedang menganalisis...</div>
-    </div>
+<div class="loading-overlay" id="loading">
+    <img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" class="mascot">
 </div>
 
 <div class="container">
 
-    <h2>Berita Indonesia</h2>
+<h3>Pilih Kategori Berita Indonesia</h3>
 
-    <select id="category" onchange="loadNews()">
-        <option value="nasional">Nasional</option>
-        <option value="politik">Politik</option>
-        <option value="ekonomi">Ekonomi</option>
-        <option value="teknologi">Teknologi</option>
-    </select>
+<select id="category" onchange="loadNews()">
+    <option value="nasional">Nasional</option>
+    <option value="politik">Politik</option>
+    <option value="ekonomi">Ekonomi</option>
+    <option value="teknologi">Teknologi</option>
+</select>
 
-    <div id="news-list"></div>
+<div id="news" class="news-list"></div>
 
-    <div class="analysis-box">
-        <h2>Analisis Kredibilitas</h2>
+<h3>Masukkan Berita A</h3>
+<textarea id="newsA"></textarea>
 
-        <label>Berita A</label>
-        <textarea id="newsA"></textarea>
+<h3>Masukkan Berita B (opsional)</h3>
+<textarea id="newsB"></textarea>
 
-        <label>Berita B (opsional)</label>
-        <textarea id="newsB"></textarea>
+<button onclick="analyze()">Analisis Berita</button>
 
-        <button onclick="analyze()">Analisis Berita</button>
-    </div>
-
-    <div id="result"></div>
+<div id="result"></div>
 
 </div>
 
 <script>
-    const API_URL = "https://project-citizen.netlify.app/.netlify/functions";
+const API_URL = "https://project-citizen-ai.netlify.app/.netlify/functions";
 
-    async function loadNews() {
-        const category = document.getElementById("category").value;
+/* =======================
+   LOAD BERITA INDONESIA
+=========================*/
+async function loadNews() {
+    const category = document.getElementById("category").value;
+    const box = document.getElementById("news");
 
-        try {
-            const res = await fetch(`${API_URL}/news?category=${category}`);
-            const data = await res.json();
+    box.innerHTML = "<p>Memuat berita...</p>";
 
-            const container = document.getElementById("news-list");
-            container.innerHTML = "";
+    try {
+        const res = await fetch(`${API_URL}/news?category=${category}`);
+        const data = await res.json();
 
-            data.forEach(n => {
-                container.innerHTML += `
-                    <div class="news-card" onclick="document.getElementById('newsA').value = \`${n.title}: ${n.description}\`">
-                        <img class="news-image" src="${n.image}" onerror="this.src='https://via.placeholder.com/120x80?text=No+Image'"/>
-                        <div>
-                            <div class="news-title">${n.title}</div>
-                            <div class="news-desc">${n.description}</div>
-                        </div>
+        box.innerHTML = "";
+
+        data.forEach(item => {
+            box.innerHTML += `
+                <div class="news-item">
+                    <img src="${item.image}">
+                    <div>
+                        <b>${item.title}</b>
+                        <p>${item.description}</p>
                     </div>
-                `;
-            });
-
-        } catch (err) {
-            console.log(err);
-        }
-    }
-
-    async function analyze() {
-        const newsA = document.getElementById("newsA").value;
-        const newsB = document.getElementById("newsB").value;
-
-        // SHOW MASKOT
-        document.getElementById("loading").style.display = "flex";
-
-        try {
-            const res = await fetch(`${API_URL}/analyze`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ newsA, newsB })
-            });
-
-            const result = await res.json();
-            const riskPercent = result.risk_percentage || 0;
-
-            document.getElementById("result").innerHTML = `
-                <div class="result-box">
-                    <h3>Hasil Analisis</h3>
-                    <pre>${result.analysis_text}</pre>
-
-                    <h4>Tingkat Risiko</h4>
-                    <div class="risk-bar-container">
-                        <div class="risk-bar" style="width:${riskPercent}%"></div>
-                    </div>
-                    <p><b>${riskPercent}% – ${result.risk_level}</b></p>
-
-                    <h4>Indikator Risiko</h4>
-                    <table class="indicator">
-                        <tr><th>Indikator</th><th>Nilai</th></tr>
-                        <tr><td>A: Sumber tidak jelas</td><td>${result.indicators.A}</td></tr>
-                        <tr><td>B: Narasumber anonim</td><td>${result.indicators.B}</td></tr>
-                        <tr><td>C: Judul sensasional</td><td>${result.indicators.C}</td></tr>
-                        <tr><td>D: Konteks tidak jelas</td><td>${result.indicators.D}</td></tr>
-                        <tr><td>E: Bahasa emosional</td><td>${result.indicators.E}</td></tr>
-                    </table>
                 </div>
             `;
-        } catch (err) {
-            alert("Gagal menganalisis berita.");
-        }
+        });
 
-        // HIDE LOADING
-        document.getElementById("loading").style.display = "none";
+    } catch (err) {
+        box.innerHTML = "<p>Gagal memuat berita.</p>";
+    }
+}
+
+loadNews();
+
+/* =======================
+   ANALISIS AI
+=========================*/
+async function analyze() {
+    const A = document.getElementById("newsA").value;
+    const B = document.getElementById("newsB").value;
+
+    if (!A.trim()) {
+        alert("Berita A wajib diisi.");
+        return;
     }
 
-    loadNews();
+    document.getElementById("loading").style.display = "flex";
+
+    try {
+        const res = await fetch(`${API_URL}/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ newsA: A, newsB: B })
+        });
+
+        const data = await res.json();
+
+        const resultBox = document.getElementById("result");
+
+        resultBox.innerHTML = `
+            <div class="result-box">
+                <h3>Hasil Analisis</h3>
+                <pre>${data.analysis_text}</pre>
+
+                <h4>Tingkat Risiko</h4>
+                <div class="risk-bar-container">
+                    <div class="risk-bar" style="width:${data.risk_percentage}%"></div>
+                </div>
+                <p><b>${data.risk_percentage}% – ${data.risk_level}</b></p>
+
+                <h4>Indikator Risiko</h4>
+                <table border="1" cellpadding="6" style="border-collapse: collapse; width: 100%;">
+                    <tr><th>Indikator</th><th>Nilai</th></tr>
+                    <tr><td>A: Sumber tidak jelas</td><td>${data.indicators.A}</td></tr>
+                    <tr><td>B: Narasumber anonim</td><td>${data.indicators.B}</td></tr>
+                    <tr><td>C: Judul sensasional</td><td>${data.indicators.C}</td></tr>
+                    <tr><td>D: Konteks tidak jelas</td><td>${data.indicators.D}</td></tr>
+                    <tr><td>E: Bahasa emosional</td><td>${data.indicators.E}</td></tr>
+                </table>
+            </div>
+        `;
+    } catch (err) {
+        alert("Analisis gagal.");
+    }
+
+    document.getElementById("loading").style.display = "none";
+}
 </script>
 
 </body>

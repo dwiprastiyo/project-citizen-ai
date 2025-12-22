@@ -19,10 +19,17 @@ export const handler = async (event) => {
     const prompt = `
 Anda adalah analis literasi media.
 
+BATASAN OUTPUT:
+- Ringkasan maksimal 5 kalimat.
+- PRO 3 poin.
+- KONTRA 3 poin.
+- Perbandingan maksimal 5 kalimat.
+- Total output maksimal 1200 karakter.
+
 TUGAS:
 1. Ringkas Berita A secara netral.
-2. Jika Berita B ada, bandingkan sudut pandang (pro-kontra, fokus, framing).
-3. Jika Berita B tidak ada, buatkan PRO & KONTRA dari Berita A saja.
+2. Jika Berita B ada, bandingkan sudut pandang.
+3. Jika tidak ada, buatkan PRO & KONTRA.
 4. Nilai 5 indikator risiko misinformasi (YA/TIDAK + alasan singkat):
    A. Sumber tidak jelas
    B. Narasumber anonim
@@ -54,27 +61,22 @@ Berita A:
 ${newsA}
 
 Berita B:
-${newsB || "(Tidak ada)"} 
+${newsB || "(Tidak ada)"}
 `;
 
     const apiKey = process.env.OPENROUTER_API_KEY;
-
     if (!apiKey) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "API key tidak terbaca di Netlify" }),
+        body: JSON.stringify({ error: "API KEY tidak terbaca di Netlify" }),
       };
     }
 
-    // ==========================
-    // Fungsi request AI dgn retry
-    // ==========================
     async function callAI(modelName) {
       let attempts = 0;
-
       while (attempts < 3) {
         try {
-          const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${apiKey}`,
@@ -86,24 +88,20 @@ ${newsB || "(Tidak ada)"}
             })
           });
 
-          const data = await res.json();
-
+          const data = await response.json();
           if (data?.choices?.[0]?.message?.content) {
             return data.choices[0].message.content;
           }
-
           attempts++;
-          await new Promise(r => setTimeout(r, 800));
-        } catch {
+          await new Promise(r => setTimeout(r, 700));
+        } catch (err) {
           attempts++;
-          await new Promise(r => setTimeout(r, 800));
+          await new Promise(r => setTimeout(r, 700));
         }
       }
-
       return null;
     }
 
-    // Model utama + fallback
     const MODELS = [
       "google/gemma-3n-e2b-it:free",
       "google/gemma-2-27b-it:free",
@@ -111,7 +109,6 @@ ${newsB || "(Tidak ada)"}
     ];
 
     let output = null;
-
     for (const model of MODELS) {
       output = await callAI(model);
       if (output) break;
@@ -124,9 +121,6 @@ ${newsB || "(Tidak ada)"}
       };
     }
 
-    // =============================
-    // Hitung indikator risiko
-    // =============================
     const indicators = { A: 0, B: 0, C: 0, D: 0, E: 0 };
 
     if (output.includes("A: YA")) indicators.A = 20;
@@ -150,14 +144,14 @@ ${newsB || "(Tidak ada)"}
         risk_percentage,
         risk_level,
         disclaimer:
-          "Persentase menunjukkan potensi risiko misinformasi berdasarkan indikator literasi media, bukan penentu kebenaran."
+          "Persentase menunjukkan potensi risiko misinformasi, bukan penentu benar atau salah."
       }),
     };
 
-  } catch (err) {
+  } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Kesalahan server", detail: err.message }),
+      body: JSON.stringify({ error: "Kesalahan server", detail: error.message }),
     };
   }
 };
